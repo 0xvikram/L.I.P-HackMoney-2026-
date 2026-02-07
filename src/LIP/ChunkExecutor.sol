@@ -1,10 +1,13 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.20;
+pragma solidity ^0.8.26;
 
 import {IPoolManager, ModifyLiquidityParams} from "@uniswap/v4-core/src/interfaces/IPoolManager.sol";
 import {IntentManager} from "./IntentManager.sol";
 import {LiquidityBuffer} from "./LiquidityBuffer.sol";
 
+/// @title ChunkExecutor
+/// @notice Permissionless executor for progressive liquidity provisioning
+/// @dev Anyone can call executeChunk to add liquidity according to intent parameters
 contract ChunkExecutor {
     IPoolManager public immutable poolManager;
     IntentManager public immutable intentManager;
@@ -17,6 +20,10 @@ contract ChunkExecutor {
     }
 
     /// @notice Execute a bounded chunk of liquidity for an intent
+    /// @dev Permissionless execution - anyone can call to execute intent chunks
+    /// @dev Flow: 1) Read intent 2) Validate chunk 3) Call poolManager.modifyLiquidity 4) Mark executed
+    /// @param intentId The ID of the intent to execute
+    /// @param chunkLiquidity Amount of liquidity to add in this execution (must be ≤ maxChunk)
     function executeChunk(uint256 intentId, uint128 chunkLiquidity) external {
         // 1. Read intent
         IntentManager.Intent memory i = intentManager.getIntent(intentId);

@@ -1,0 +1,81 @@
+Compiling 1 files with Solc 0.8.26
+Solc 0.8.26 finished in 2.22s
+Compiler run successful with warnings:
+Warning (2018): Function state mutability can be restricted to view
+  --> src/LIP/LIPHook.sol:49:5:
+   |
+49 |     function beforeAddLiquidity(
+   |     ^ (Relevant source part starts here and spans across multiple lines).
+
+Warning (2018): Function state mutability can be restricted to pure
+  --> src/LIP/LIPHook.sol:64:5:
+   |
+64 |     function beforeRemoveLiquidity(
+   |     ^ (Relevant source part starts here and spans across multiple lines).
+
+Traces:
+  [12985863] → new LIPDeploy@0x9f7cF1d1F558E57ef88a59ac3D47214eF25B6A06
+    └─ ← [Return] 64716 bytes of code
+
+  [21109620] LIPDeploy::run()
+    ├─ [0] console::log("=== LIP DEPLOYMENT STARTING ===") [staticcall]
+    │   └─ ← [Stop]
+    ├─ [0] console::log("Deployer:", DefaultSender: [0x1804c8AB1F12E6bbf3894d4083f33e07309d1f38]) [staticcall]
+    │   └─ ← [Stop]
+    ├─ [0] VM::startBroadcast()
+    │   └─ ← [Return]
+    ├─ [6949335] → new PoolManager@0x5b73C5498c1E3b4dbA84de0F1833c4a029d90519
+    │   ├─ emit OwnershipTransferred(user: 0x0000000000000000000000000000000000000000, newOwner: DefaultSender: [0x1804c8AB1F12E6bbf3894d4083f33e07309d1f38])
+    │   └─ ← [Return] 34582 bytes of code
+    ├─ [0] console::log("PoolManager deployed at:", PoolManager: [0x5b73C5498c1E3b4dbA84de0F1833c4a029d90519]) [staticcall]
+    │   └─ ← [Stop]
+    ├─ [339028] → new TestToken@0x7FA9385bE102ac3EAc297483Dd6233D62b3e1496
+    │   └─ ← [Return] 1348 bytes of code
+    ├─ [339028] → new TestToken@0x34A1D3fff3958843C43aD80F30b94c510645C316
+    │   └─ ← [Return] 1348 bytes of code
+    ├─ [0] console::log("Token0:", TestToken: [0x34A1D3fff3958843C43aD80F30b94c510645C316]) [staticcall]
+    │   └─ ← [Stop]
+    ├─ [0] console::log("Token1:", TestToken: [0x7FA9385bE102ac3EAc297483Dd6233D62b3e1496]) [staticcall]
+    │   └─ ← [Stop]
+    ├─ [548579] → new LiquidityBuffer@0x90193C961A926261B756D1E5bb255e67ff9498A1
+    │   └─ ← [Return] 2740 bytes of code
+    ├─ [0] console::log("LiquidityBuffer deployed at:", LiquidityBuffer: [0x90193C961A926261B756D1E5bb255e67ff9498A1]) [staticcall]
+    │   └─ ← [Stop]
+    ├─ [1401656] → new IntentManager@0xA8452Ec99ce0C64f20701dB7dD3abDb607c00496
+    │   └─ ← [Return] 7001 bytes of code
+    ├─ [0] console::log("IntentManager deployed at:", IntentManager: [0xA8452Ec99ce0C64f20701dB7dD3abDb607c00496]) [staticcall]
+    │   └─ ← [Stop]
+    ├─ [759570] → new ChunkExecutor@0xBb2180ebd78ce97360503434eD37fcf4a1Df61c3
+    │   └─ ← [Return] 3789 bytes of code
+    ├─ [0] console::log("ChunkExecutor deployed at:", ChunkExecutor: [0xBb2180ebd78ce97360503434eD37fcf4a1Df61c3]) [staticcall]
+    │   └─ ← [Stop]
+    ├─ [0] console::log("Mining salt for hook address...") [staticcall]
+    │   └─ ← [Stop]
+    ├─ [0] console::log("Found hook address:", 0xb9052DA2006b5c1A58a180f699CC114c49ad4a00) [staticcall]
+    │   └─ ← [Stop]
+    ├─ [0] console::log("Salt:") [staticcall]
+    │   └─ ← [Stop]
+    ├─ [0] console::log(0x0000000000000000000000000000000000000000000000000000000000000f5a) [staticcall]
+    │   └─ ← [Stop]
+    ├─ [37416] Create2Deployer::create2()
+    │   ├─ [1954] → new CurrencyDelta@0xec361177d64908916B3E05Ea0E0DA9f65bC3b2c5
+    │   │   └─ ← [Revert] 0xe65af6a0000000000000000000000000ec361177d64908916b3e05ea0e0da9f65bc3b2c5
+    │   └─ ← [Revert] EvmError: Revert
+    └─ ← [Revert] EvmError: Revert
+
+
+
+== Logs ==
+  === LIP DEPLOYMENT STARTING ===
+  Deployer: 0x1804c8AB1F12E6bbf3894d4083f33e07309d1f38
+  PoolManager deployed at: 0x5b73C5498c1E3b4dbA84de0F1833c4a029d90519
+  Token0: 0x34A1D3fff3958843C43aD80F30b94c510645C316
+  Token1: 0x7FA9385bE102ac3EAc297483Dd6233D62b3e1496
+  LiquidityBuffer deployed at: 0x90193C961A926261B756D1E5bb255e67ff9498A1
+  IntentManager deployed at: 0xA8452Ec99ce0C64f20701dB7dD3abDb607c00496
+  ChunkExecutor deployed at: 0xBb2180ebd78ce97360503434eD37fcf4a1Df61c3
+  Mining salt for hook address...
+  Found hook address: 0xb9052DA2006b5c1A58a180f699CC114c49ad4a00
+  Salt:
+  0x0000000000000000000000000000000000000000000000000000000000000f5a
+Error: script failed: <empty revert data>

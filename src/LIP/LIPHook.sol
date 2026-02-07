@@ -1,13 +1,17 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.20;
+pragma solidity ^0.8.26;
 
 import {BaseHook} from "@openzeppelin/uniswap-hooks/src/base/BaseHook.sol";
 import {Hooks} from "@uniswap/v4-core/src/libraries/Hooks.sol";
 import {PoolKey} from "@uniswap/v4-core/src/types/PoolKey.sol";
 import {IPoolManager, ModifyLiquidityParams} from "@uniswap/v4-core/src/interfaces/IPoolManager.sol";
 
+/// @title LIPHook
+/// @notice Uniswap v4 hook enforcing intent-based liquidity provisioning
+/// @dev Blocks all direct LP adds/removes, only allows ChunkExecutor with intent context
 contract LIPHook is BaseHook {
-    /// @notice authorized executor (ChunkExecutor)
+    /// @notice Authorized executor address (ChunkExecutor contract)
+    /// @dev Only this address can add liquidity, and must provide intent context
     address public executor;
 
     constructor(
@@ -46,12 +50,17 @@ contract LIPHook is BaseHook {
                             LIQUIDITY
     //////////////////////////////////////////////////////////////*/
 
+    /// @notice Hook called before adding liquidity to enforce intent-based execution
+    /// @dev Validates that sender is executor and intent context is provided
+    /// @param sender The address attempting to add liquidity (must be executor)
+    /// @param data Must contain intent context (intentId) for validation
+    /// @return Function selector indicating successful validation
     function beforeAddLiquidity(
         address sender,
         PoolKey calldata,
         ModifyLiquidityParams calldata,
         bytes calldata data
-    ) external override returns (bytes4) {
+    ) external view override returns (bytes4) {
         // Block all direct LP adds
         require(sender == executor, "LIP: direct LP blocked");
 
@@ -61,12 +70,15 @@ contract LIPHook is BaseHook {
         return this.beforeAddLiquidity.selector;
     }
 
+    /// @notice Hook called before removing liquidity - currently blocked
+    /// @dev All liquidity removals are blocked in current version (future: intent-based removal)
+    /// @return Never returns - always reverts
     function beforeRemoveLiquidity(
         address,
         PoolKey calldata,
         ModifyLiquidityParams calldata,
         bytes calldata
-    ) external override returns (bytes4) {
+    ) external pure override returns (bytes4) {
         // Liquidity removal is also intent-based (future)
         revert("LIP: remove blocked");
     }

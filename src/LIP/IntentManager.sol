@@ -1,9 +1,21 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.20;
+pragma solidity ^0.8.26;
 
 import {PoolKey} from "@uniswap/v4-core/src/types/PoolKey.sol";
 
+/// @title IntentManager
+/// @notice Manages the lifecycle of LP intents for progressive liquidity provision
+/// @dev Core contract for creating, tracking, and cancelling liquidity intents
 contract IntentManager {
+    /// @notice Intent structure containing all liquidity provision parameters
+    /// @param lp The address of the liquidity provider who created the intent
+    /// @param pool The Uniswap v4 pool targeted for liquidity provision
+    /// @param tickLower Lower tick bound of the liquidity range
+    /// @param tickUpper Upper tick bound of the liquidity range
+    /// @param totalLiquidity Total liquidity amount to be provided across all chunks
+    /// @param executedLiquidity Amount of liquidity already executed
+    /// @param maxChunk Maximum liquidity size allowed per single execution
+    /// @param active Whether the intent is still active and can be executed
     struct Intent {
         address lp; // intent owner
         PoolKey pool; // target pool
@@ -32,6 +44,13 @@ contract IntentManager {
     );
 
     /// @notice Create a new liquidity intent
+    /// @dev Validates intent parameters and stores in state with sequential ID
+    /// @param pool The Uniswap v4 PoolKey specifying the target pool
+    /// @param tickLower Lower tick bound for the liquidity range
+    /// @param tickUpper Upper tick bound for the liquidity range
+    /// @param totalLiquidity Total amount of liquidity to provide across all executions
+    /// @param maxChunk Maximum liquidity size per execution (prevents single large adds)
+    /// @return intentId The unique identifier for this intent
     function createIntent(
         PoolKey calldata pool,
         int24 tickLower,
@@ -60,7 +79,9 @@ contract IntentManager {
     }
 
     /// @notice Mark part of the intent as executed
-    /// @dev called by executor after successful liquidity add
+    /// @dev Called by ChunkExecutor after successful liquidity add. Auto-deactivates when complete.
+    /// @param intentId The ID of the intent being executed
+    /// @param amount The amount of liquidity that was just added in this chunk
     function markExecuted(uint256 intentId, uint128 amount) external {
         Intent storage i = intents[intentId];
         require(i.active, "inactive intent");
@@ -80,6 +101,8 @@ contract IntentManager {
     }
 
     /// @notice Cancel an active intent and stop future execution
+    /// @dev Only the original LP (intent creator) can cancel their intent
+    /// @param intentId The ID of the intent to cancel
     function cancelIntent(uint256 intentId) external {
         Intent storage i = intents[intentId];
         require(i.lp == msg.sender, "not intent owner");
@@ -89,6 +112,9 @@ contract IntentManager {
     }
 
     /// @notice Get an intent by ID
+    /// @dev Returns the full Intent struct instead of tuple for easier access
+    /// @param intentId The ID of the intent to retrieve
+    /// @return The complete Intent struct with all parameters
     function getIntent(uint256 intentId) external view returns (Intent memory) {
         return intents[intentId];
     }

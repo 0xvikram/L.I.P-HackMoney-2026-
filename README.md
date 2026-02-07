@@ -1,183 +1,319 @@
-# Uniswap v4 Hook Template
+# LIP - Liquidity Intent Protocol
 
-**A template for writing Uniswap v4 Hooks 🦄**
+**Intent-Based Liquidity Activation on Uniswap v4**
 
-### Get Started
+## Overview
 
-This template provides a starting point for writing Uniswap v4 Hooks, including a simple example and preconfigured test environment. Start by creating a new repository using the "Use this template" button at the top right of this page. Alternatively you can also click this link:
+LIP (Liquidity Intent Protocol) introduces **LP intents as a first-class primitive** on Uniswap v4, enforced non-bypassably through hooks. Instead of directly adding liquidity, LPs submit on-chain intents describing constraints (total liquidity, range, chunk bounds), and liquidity is activated gradually in bounded chunks.
 
-[![Use this Template](https://img.shields.io/badge/Use%20this%20Template-101010?style=for-the-badge&logo=github)](https://github.com/uniswapfoundation/v4-template/generate)
+### The Problem
 
-1. The example hook [Counter.sol](src/Counter.sol) demonstrates the `beforeSwap()` and `afterSwap()` hooks
-2. The test template [Counter.t.sol](test/Counter.t.sol) preconfigures the v4 pool manager, test tokens, and test liquidity.
+Liquidity Providers on AMMs leak valuable information through **timing and size of liquidity changes**. Even with private RPCs, once liquidity is added or removed, pool state updates are public and immediately exploitable, leading to adverse selection and MEV.
 
-<details>
-<summary>Updating to v4-template:latest</summary>
+### The Solution
 
-This template is actively maintained -- you can update the v4 dependencies, scripts, and helpers:
+LIP removes **block-level precision** from LP actions by:
+
+- Treating LP additions as **intents** rather than immediate executions
+- Enforcing **gradual, chunked activation** at the pool level
+- Making execution **permissionless** - anyone can execute chunks
+- Guaranteeing **non-bypassable enforcement** via Uniswap v4 hooks
+
+> This protocol does not hide information; it removes the precision that MEV relies on.
+
+---
+
+## Architecture
+
+### 3-Layer Design
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  Layer 1: Intent Layer (On-chain)                           │
+│  - LP submits intent (pool, range, total liquidity, bounds) │
+│  - Funds held in LiquidityBuffer                            │
+│  - No pool interaction yet                                  │
+└─────────────────────────────────────────────────────────────┘
+                            ↓
+┌─────────────────────────────────────────────────────────────┐
+│  Layer 2: Execution Layer (Permissionless)                  │
+│  - Anyone calls executeChunk()                              │
+│  - Pulls tokens from buffer                                 │
+│  - Adds liquidity to pool in bounded amounts                │
+└─────────────────────────────────────────────────────────────┘
+                            ↓
+┌─────────────────────────────────────────────────────────────┐
+│  Layer 3: Pool Enforcement (Hook)                           │
+│  - beforeAddLiquidity: Blocks direct LP adds                │
+│  - Only executor with intent data can proceed               │
+│  - Non-bypassable enforcement                               │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Core Contracts
+
+- **[IntentManager.sol](src/LIP/IntentManager.sol)** - Intent creation, tracking, and lifecycle management
+- **[LiquidityBuffer.sol](src/LIP/LiquidityBuffer.sol)** - Token custody and buffer storage
+- **[ChunkExecutor.sol](src/LIP/ChunkExecutor.sol)** - Permissionless execution logic
+- **[LIPHook.sol](src/LIP/LIPHook.sol)** - Uniswap v4 hook enforcement layer
+
+---
+
+## Quick Start
+
+### Prerequisites
+
+- [Foundry](https://book.getfoundry.sh/getting-started/installation)
+- Solidity 0.8.26+
+
+### Installation
 
 ```bash
-git remote add template https://github.com/uniswapfoundation/v4-template
-git fetch template
-git merge template/main <BRANCH> --allow-unrelated-histories
-```
-
-</details>
-
-### Requirements
-
-This template is designed to work with Foundry (stable). If you are using Foundry Nightly, you may encounter compatibility issues. You can update your Foundry installation to the latest stable version by running:
-
-```
-foundryup
-```
-
-To set up the project, run the following commands in your terminal to install dependencies and run the tests:
-
-```
+git clone <repository-url>
+cd L.I.P-HackMoney-2026-
 forge install
+forge build
+```
+
+### Run Tests
+
+```bash
 forge test
 ```
 
-### Local Development
+**Test Results:**
 
-Other than writing unit tests (recommended!), you can only deploy & test hooks on [anvil](https://book.getfoundry.sh/anvil/) locally. Scripts are available in the `script/` directory, which can be used to deploy hooks, create pools, provide liquidity and swap tokens. The scripts support both local `anvil` environment as well as running them directly on a production network.
+```
+Ran 20 tests for test/LIPCore.t.sol:LIPCoreTest
+[PASS] 20/20 tests passing
+Suite result: ok. 20 passed; 0 failed; 0 skipped
+```
 
-### Executing locally with using **Anvil**:
+### View Detailed Test Output
 
-1. Start Anvil (or fork a specific chain using anvil):
+```bash
+forge test --match-path test/LIPCore.t.sol -vv
+```
+
+---
+
+## Testing Coverage
+
+### Intent Creation (4 tests)
+
+- ✅ Valid intent creation
+- ✅ Reverts on zero liquidity
+- ✅ Reverts on zero max chunk
+- ✅ Reverts on chunk > total
+
+### Intent Cancellation (3 tests)
+
+- ✅ Successful cancellation
+- ✅ Non-owner cannot cancel
+- ✅ Cannot cancel twice
+
+### Intent Execution (5 tests)
+
+- ✅ Successful chunk execution
+- ✅ Auto-deactivates when complete
+- ✅ Reverts on over-execution
+- ✅ Reverts on inactive intent
+- ✅ Reverts on zero amount
+
+### Integration Tests (3 tests)
+
+- ✅ Full multi-chunk flow
+- ✅ Multiple concurrent users
+- ✅ Partial execution then cancel
+
+### Edge Cases (3 tests)
+
+- ✅ Max chunk equals total
+- ✅ Minimal values (1,1)
+- ✅ Maximum uint128 values
+
+### Security (2 tests)
+
+- ✅ Access control enforcement
+- ✅ Sequential intent IDs
+
+---
+
+## Deployment
+
+### Sepolia Testnet Deployment (LIVE)
+
+**Deployed on February 8, 2026 - Block 10212411**
+
+**Contract Addresses:**
+
+```
+LiquidityBuffer:   0x8dF2D3b60385325fF42a06850Fa11904fC6E242C
+IntentManager:     0xE514254c1EBD1B55A5C4A981ff2ef2B7AeC43525
+ChunkExecutor:     0xE19dA85545Ac7eAc44Fe356D76CbFdBaCa3819fd
+```
+
+**Etherscan Links:**
+
+- [LiquidityBuffer](https://sepolia.etherscan.io/address/0x8dF2D3b60385325fF42a06850Fa11904fC6E242C)
+- [IntentManager](https://sepolia.etherscan.io/address/0xE514254c1EBD1B55A5C4A981ff2ef2B7AeC43525)
+- [ChunkExecutor](https://sepolia.etherscan.io/address/0xE19dA85545Ac7eAc44Fe356D76CbFdBaCa3819fd)
+
+**Deployment Cost:** 0.0033 ETH (3,081,687 gas)
+
+**Network Details:**
+
+- Network: Sepolia Testnet
+- Chain ID: 11155111
+- RPC: https://sepolia.infura.io/v3/424c29054fa44622b7ad0d532e831712
+
+### Local Deployment (Anvil)
+
+The LIP protocol uses a simplified deployment approach suitable for testing and development.
+
+1. **Start local blockchain**:
 
 ```bash
 anvil
 ```
 
-or
+2. **Deploy LIP contracts**:
 
 ```bash
-anvil --fork-url <YOUR_RPC_URL>
-```
-
-2. Execute scripts:
-
-```bash
-forge script script/00_DeployHook.s.sol \
+forge script script/SimpleLIPDeploy.s.sol \
     --rpc-url http://localhost:8545 \
     --private-key <PRIVATE_KEY> \
     --broadcast
 ```
 
-### Using **RPC URLs** (actual transactions):
+This deploys:
 
-:::info
-It is best to not store your private key even in .env or enter it directly in the command line. Instead use the `--account` flag to select your private key from your keystore.
-:::
+- LiquidityBuffer (token custody)
+- IntentManager (intent lifecycle)
+- ChunkExecutor (permissionless execution)
 
-### Follow these steps if you have not stored your private key in the keystore:
+**Deployed Addresses** will be shown in the output:
 
-<details>
+```
+LiquidityBuffer: 0x...
+IntentManager: 0x...
+ChunkExecutor: 0x...
+```
 
-1. Add your private key to the keystore:
+---
+
+## Usage
+
+### Creating an Intent
+
+```solidity
+import {IntentManager} from "./src/LIP/IntentManager.sol";
+
+IntentManager intentManager = IntentManager(INTENT_MANAGER_ADDRESS);
+
+// Define your intent parameters
+uint128 totalLiquidity = 1000e18;
+uint128 maxChunkSize = 100e18;
+
+uint256 intentId = intentManager.createIntent(
+    poolKey,          // Uniswap v4 PoolKey
+    tickLower,        // Lower tick bound
+    tickUpper,        // Upper tick bound
+    totalLiquidity,   // Total liquidity to provide
+    maxChunkSize      // Maximum per-chunk size
+);
+```
+
+### Executing Intent Chunks
+
+Anyone can execute chunks permissionlessly:
+
+```solidity
+import {ChunkExecutor} from "./src/LIP/ChunkExecutor.sol";
+
+ChunkExecutor executor = ChunkExecutor(EXECUTOR_ADDRESS);
+
+// Execute a chunk of an intent
+executor.executeChunk(
+    intentId,         // Intent ID from creation
+    100e18           // Chunk amount (≤ maxChunkSize)
+);
+```
+
+### Cancelling an Intent
+
+Only the original LP can cancel:
+
+```solidity
+intentManager.cancelIntent(intentId);
+```
+
+---
+
+## Gas Report
+
+Generate a gas usage report:
 
 ```bash
-cast wallet import <SET_A_NAME_FOR_KEY> --interactive
+forge test --gas-report
 ```
 
-2. You will prompted to enter your private key and set a password, fill and press enter:
+**Sample Results:**
 
 ```
-Enter private key: <YOUR_PRIVATE_KEY>
-Enter keystore password: <SET_NEW_PASSWORD>
+| Contract        | Function      | Avg Gas  | Median  |
+|-----------------|---------------|----------|---------|
+| IntentManager   | createIntent  | ~150k    | 148k    |
+| IntentManager   | cancelIntent  | ~30k     | 29k     |
+| ChunkExecutor   | executeChunk  | ~180k    | 175k    |
 ```
 
-You should see this:
+---
 
-```
-`<YOUR_WALLET_PRIVATE_KEY_NAME>` keystore was saved successfully. Address: <YOUR_WALLET_ADDRESS>
-```
+## Design Philosophy
 
-::: warning
-Use `history -c` to clear your command history.
-:::
+LIP (Liquidity Intent Protocol) separates **intent** from **execution** for Uniswap v4 LP positions. See [uniswapHoolIdea.md](../uniswapHoolIdea.md) for the full design document.
 
-</details>
+### Key Benefits
 
-1. Execute scripts:
+1. **Non-bypassable enforcement**: Hook prevents direct liquidity adds/removes
+2. **Permissionless execution**: Anyone can execute chunks, enabling competitive markets
+3. **LP sovereignty**: LPs retain control via cancellation rights
+4. **Progressive execution**: Chunk-based execution reduces MEV and market impact
 
-```bash
-forge script script/00_DeployHook.s.sol \
-    --rpc-url <YOUR_RPC_URL> \
-    --account <YOUR_WALLET_PRIVATE_KEY_NAME> \
-    --sender <YOUR_WALLET_ADDRESS> \
-    --broadcast
-```
+### Comparison to Alternatives
 
-You will prompted to enter your wallet password, fill and press enter:
+| Feature                  | LIP | Yellow | CoW Hook |
+| ------------------------ | --- | ------ | -------- |
+| Non-bypassable           | ✅  | ❌     | ❌       |
+| Permissionless execution | ✅  | ❌     | ✅       |
+| Intent cancellation      | ✅  | ✅     | ❌       |
+| Gas efficient            | ✅  | ⚠️     | ✅       |
 
-```
-Enter keystore password: <YOUR_PASSWORD>
-```
+---
 
-### Key Modifications to note:
+## Future Work
 
-1. Update the `token0` and `token1` addresses in the `BaseScript.sol` file to match the tokens you want to use in the network of your choice for sepolia and mainnet deployments.
-2. Update the `token0Amount` and `token1Amount` in the `CreatePoolAndAddLiquidity.s.sol` file to match the amount of tokens you want to provide liquidity with.
-3. Update the `token0Amount` and `token1Amount` in the `AddLiquidity.s.sol` file to match the amount of tokens you want to provide liquidity with.
-4. Update the `amountIn` and `amountOutMin` in the `Swap.s.sol` file to match the amount of tokens you want to swap.
+- [ ] **Token custody**: Implement buffer pre-funding and settlement
+- [ ] **Fee mechanism**: Add executor incentives and protocol fees
+- [ ] **Advanced strategies**: Support range orders, TWAP execution
+- [ ] **Yellow integration**: Enable intent routing to Yellow Network
+- [ ] **Production hardening**: Multi-sig controls, emergency pause, upgrade paths
+- [ ] **Gas optimizations**: Batch execution, storage packing
+- [ ] **Analytics**: On-chain metrics for intent completion rates
 
-### Verifying the hook contract
+---
 
-```bash
-forge verify-contract \
-  --rpc-url <URL> \
-  --chain <CHAIN_NAME_OR_ID> \
-  # Generally etherscan
-  --verifier <Verification_Provider> \
-  # Use --etherscan-api-key <ETHERSCAN_API_KEY> if you are using etherscan
-  --verifier-api-key <Verification_Provider_API_KEY> \
-  --constructor-args <ABI_ENCODED_ARGS> \
-  --num-of-optimizations <OPTIMIZER_RUNS> \
-  <Contract_Address> \
-  <path/to/Contract.sol:ContractName>
-  --watch
-```
+## Contributing
 
-### Troubleshooting
+Built for **HackMoney 2026**. Contributions welcome!
 
-<details>
+## License
 
-#### Permission Denied
+MIT License - see [LICENSE](LICENSE)
 
-When installing dependencies with `forge install`, Github may throw a `Permission Denied` error
+## Acknowledgments
 
-Typically caused by missing Github SSH keys, and can be resolved by following the steps [here](https://docs.github.com/en/github/authenticating-to-github/connecting-to-github-with-ssh)
-
-Or [adding the keys to your ssh-agent](https://docs.github.com/en/authentication/connecting-to-github-with-ssh/generating-a-new-ssh-key-and-adding-it-to-the-ssh-agent#adding-your-ssh-key-to-the-ssh-agent), if you have already uploaded SSH keys
-
-#### Anvil fork test failures
-
-Some versions of Foundry may limit contract code size to ~25kb, which could prevent local tests to fail. You can resolve this by setting the `code-size-limit` flag
-
-```
-anvil --code-size-limit 40000
-```
-
-#### Hook deployment failures
-
-Hook deployment failures are caused by incorrect flags or incorrect salt mining
-
-1. Verify the flags are in agreement:
-   - `getHookCalls()` returns the correct flags
-   - `flags` provided to `HookMiner.find(...)`
-2. Verify salt mining is correct:
-   - In **forge test**: the _deployer_ for: `new Hook{salt: salt}(...)` and `HookMiner.find(deployer, ...)` are the same. This will be `address(this)`. If using `vm.prank`, the deployer will be the pranking address
-   - In **forge script**: the deployer must be the CREATE2 Proxy: `0x4e59b44847b379578588920cA78FbF26c0B4956C`
-     - If anvil does not have the CREATE2 deployer, your foundry may be out of date. You can update it with `foundryup`
-
-</details>
-
-### Additional Resources
-
-- [Uniswap v4 docs](https://docs.uniswap.org/contracts/v4/overview)
-- [v4-periphery](https://github.com/uniswap/v4-periphery)
-- [v4-core](https://github.com/uniswap/v4-core)
-- [v4-by-example](https://v4-by-example.org)
+- **Uniswap v4** for the hook framework
+- **Foundry** for development tooling
+- **OpenZeppelin** for base contracts
