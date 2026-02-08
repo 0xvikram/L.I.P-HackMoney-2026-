@@ -87,5 +87,5 @@ contract LIPHook is BaseHook {
                             SWAPS
     //////////////////////////////////////////////////////////////*/
 
-    // We do NOT touch swaps — this is LP-only enforcement
+    
 }

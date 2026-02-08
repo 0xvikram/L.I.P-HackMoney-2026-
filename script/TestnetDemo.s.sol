@@ -41,8 +41,8 @@ contract TestnetDemo is Script {
     // ========== CONFIGURATION ==========
     // Update these for your testnet deployment
 
-    // Using mock address for demo - update with real PoolManager for production
-    address constant POOL_MANAGER = 0x1111111111111111111111111111111111111111;
+    // Real Uniswap v4 PoolManager on Sepolia (as of Feb 2026)
+    address constant POOL_MANAGER = 0xE03A1074c86CFeDd5C142C4F04F1a1536e203543;
 
     // Set to true if you want to attempt hook deployment with salt mining
     // WARNING: This can take time and may fail if no valid salt is found

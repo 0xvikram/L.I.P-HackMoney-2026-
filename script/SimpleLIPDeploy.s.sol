@@ -15,19 +15,17 @@ contract SimpleLIPDeploy is Script {
     function run() external {
         console.log("=== SIMPLE LIP DEPLOYMENT ===");
         console.log("Deployer:", msg.sender);
-
+        
         vm.startBroadcast();
 
         // For hackathon demo: use mock pool manager address
-        address mockPoolManager = address(
-            0x1111111111111111111111111111111111111111
-        );
+        address mockPoolManager = address(0x1111111111111111111111111111111111111111);
         console.log("Using mock PoolManager:", mockPoolManager);
 
         // Deploy LIP core contracts
         LiquidityBuffer buffer = new LiquidityBuffer();
         console.log("LiquidityBuffer:", address(buffer));
-
+        
         IntentManager intentManager = new IntentManager();
         console.log("IntentManager:", address(intentManager));
 

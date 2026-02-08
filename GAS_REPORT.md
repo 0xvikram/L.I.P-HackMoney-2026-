@@ -95,3 +95,7 @@ Total tests run: 20/20 passing
 ✅ **Overall costs** are competitive with direct LP provisioning when amortized
 
 The gas profile supports the LIP value proposition: **progressive, controlled liquidity provisioning with minimal overhead**.
+
+
+forge script script/TestnetDemo.s.sol   --rpc-url https://sepolia.infura.io/v3/424c29054fa44622b7ad0d532e831712   --private-key 886247bc26464669b4b1dc2ec772343c93429e08850ae8dd318ac3d9b6d557a7   --broadcast -vvv
+
